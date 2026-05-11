@@ -1,0 +1,142 @@
+---
+title: "Bayescoverage APP - overview"
+author: "Leontine Alkema, May 11 2026"
+format: pdf
+editor: visual
+---
+
+Installation info is given in the readme.
+
+Just loading all packages here to avoid issues (we may be able to remove some, eg brms).
+
+```{r}
+#| label: setup
+library(bayescoveragemodel)
+library(localhierarchy) # for check_nas...
+library(tidyverse)
+library(ggplot2)
+#library(ggnewscale)
+#library(ggpubr)
+library(haven)
+#library(stringr)
+#library(readxl)
+library(brms) # brms required for routine stuff
+options(cmdstanr_warn_inits = FALSE)
+```
+
+Where data are stored:
+
+```{r}
+data_folder <- "data_raw" # for survey data 
+routinedata_dir <- here::here("private/routinedata/")
+```
+
+
+Choose an indicator. Naming comes from survey data, options include
+
+-   c("anc1trimester", "vmsl", "ideliv", "vdpt", "anc4") , with routine as available
+
+-    c("bfexcl0_5", "ancq8" , "cci" , "sba" ), no routine data
+
+```{r}
+indicator_select <-"anc4" #"cci"#"vdpt"#"anc4"
+```
+
+Read in survey data and process
+
+```{r}
+dat0 <- read_dta(here::here(data_folder, "ICEH_all.long.dta")) %>%
+  rename(r = r_raw, se = se_raw) 
+# process for indicator_select
+dat <- process_data(
+  dat = dat0,
+  regions_dat = bayescoveragemodel::regions_all,
+  indicator = indicator_select)
+```
+
+Do we want to add routine data?
+
+```{r}
+add_routine <- ifelse(
+  indicator_select %in% c("anc1trimester", "vmsl", "ideliv", "vdpt", "anc4"),
+  TRUE, 
+  FALSE)
+add_routine
+```
+
+If yes, read in routine data. Some processing, we'll move this processing into a function.
+
+```{r}
+if (!add_routine){
+  routine_dat  <- routine_dat_use <- NULL
+} else {
+  routine_dat0 <- read_csv(
+    paste0(routinedata_dir, "/dat_combi_",
+           indicator_select,  ".csv")) %>% 
+    mutate(indicator = indicator_select)
+  # routine_dat has indicator_name (name in routine) and 
+  # indicator (indicator name from survey data
+  routine_dat  <-
+    routine_dat0  %>%
+    filter(worst_notmissing >= 90,
+           worst_notoutliers >= 90,
+           worst_abs_diff_level < 0.2,
+           worst_rr >= 60) %>%
+    #%>%
+    #  filter(!is.na(diff_roc))
+    # remove countries w/o any nonNA diff_roc
+    group_by(iso) %>%
+    filter(sum(!is.na(diff_roc)) > 0) %>%
+    ungroup() %>%
+    mutate(sd_routine_roc = 0,
+           sd_routine = 0) %>%
+    mutate(worst_combi =
+             worst_rr/100*worst_notmissing/100*worst_notoutliers)
+}
+```
+
+Fitting for one country, use ISO to select
+
+```{r}
+# countries with survey data
+# unique(dat$iso)
+iso_select <- "RWA"
+dat_use <- 
+  dat %>% 
+  filter(iso %in% iso_select)
+if (add_routine){
+  routine_dat_use <- 
+    routine_dat %>% 
+    filter(iso %in% iso_select)
+}
+```
+
+```{r}
+fit <- fit_model(runstep = "local_national",
+                       y = "invprobit_indicator",
+                       se = "se_invprobit_indicator",
+                       survey_df = dat_use,
+                       routine_data = routine_dat_use,
+                       #stan_file_path = stan_file_path_update,
+                       chains = 4,
+                       iter_sampling = 300,
+                       iter_warmup = 150,
+                       # validation_cutoff_year = 2010,
+                       get_posteriors = TRUE)
+```
+
+Overview plot
+```{r}
+countryplot <- plot_estimates_local_all(
+  results = fit,
+  save_plots = FALSE)[[1]]
+countryplot
+```
+
+Estimates 
+
+```{r}
+fit$posteriors$temporal %>%
+  select(iso, year, `50%`, `2.5%`, `97.5%`) 
+```
+

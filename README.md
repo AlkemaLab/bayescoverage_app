@@ -36,3 +36,8 @@ Dependencies
 - For using routine data, `brms` is used as well, install using
 
 `install.packages("brms")`
+
+# Data
+
+Survey data are included in the `data_raw` folder. Routine data are not
+on github, store those in your local `private/routinedata/` folder.
