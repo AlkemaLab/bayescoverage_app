@@ -49,6 +49,10 @@ Dependencies
 
 `install.packages("brms")` 
 
-# Data
+# Data and analysis
 
-Survey data are included in the `data_raw` folder. Routine data are not on github, store those in your local `private/routinedata/` folder. 
+Survey data are included in the `data_raw` folder. Model fitting with survey data is illustrated in `analysis/bayescoverageapp.qmd` and `analysis/shinyapp.R`.
+
+Routine data are not on github, store those in your local `private/routinedata/` folder. For testing, a routine toy data set is included in the `data_raw` folder, you need to add `iso` and `indicator_name` to that data set to use it, see quarto and shiny app for example use.
+
+
