@@ -61,8 +61,28 @@ ui <- fluidPage(
         checkboxInput("add_routine", "Add Routine Data", value = FALSE)
       ),
 
+      # Routine data source selection
+      conditionalPanel(
+        condition = "input.add_routine == true && ['anc1trimester', 'vmsl', 'ideliv', 'vdpt', 'anc4'].includes(input.indicator)",
+        radioButtons("routine_source", "Routine Data Source:",
+                     choices = c("Use existing data (dummy)" = "existing",
+                                 "Upload file" = "upload"),
+                     selected = "existing")
+      ),
+
+      # Conditional file upload for routine data
+      conditionalPanel(
+        condition = "input.add_routine == true && input.routine_source == 'upload' && ['anc1trimester', 'vmsl', 'ideliv', 'vdpt', 'anc4'].includes(input.indicator)",
+        fileInput("routine_file", "Upload Routine Data (.csv):",
+                  accept = c(".csv")),
+        helpText("Expected format: iso, year, routine_value, routine_roc, worst_combi, sd_routine_roc, sd_routine, indicator_name, indicator")
+      ),
+
       # Run button
       actionButton("run_model", "Run Model", class = "btn-primary"),
+
+      # Start over button
+      actionButton("start_over", "Start Over", class = "btn-warning"),
 
       hr(),
 
@@ -118,6 +138,13 @@ server <- function(input, output, session) {
     }
   })
 
+  # Start over when button clicked
+  observeEvent(input$start_over, {
+    rv$fit_local <- NULL
+    rv$model_complete <- FALSE
+    showNotification("Results cleared. Ready to run a new model.", type = "message", duration = 3)
+  })
+
   # Run model when button clicked
   observeEvent(input$run_model, {
     req(input$iso_code)
@@ -160,7 +187,30 @@ server <- function(input, output, session) {
         # Handle routine data
         routine_dat_use <- NULL
         if (isTRUE(input$add_routine) && indicator_select %in% indicator_routine) {
-          routine_dat_use <- read_csv(here::here("data_raw/routine_toydata.csv"), show_col_types = FALSE) %>%
+          # Read routine data based on source
+          if (input$routine_source == "upload") {
+            # Use uploaded file
+            req(input$routine_file)
+
+            # Read uploaded routine data
+            routine_dat_raw <- read_csv(input$routine_file$datapath, show_col_types = FALSE)
+
+            # Validate columns
+            required_cols <- c("year", "routine_value", "routine_roc", "worst_combi",
+                             "sd_routine_roc", "sd_routine")
+            missing_cols <- setdiff(required_cols, names(routine_dat_raw))
+
+            if (length(missing_cols) > 0) {
+              stop(paste("Uploaded routine data is missing required columns:",
+                        paste(missing_cols, collapse = ", ")))
+            }
+          } else {
+            # Use existing (dummy) routine data
+            routine_dat_raw <- read_csv(here::here("data_raw/routine_toydata.csv"), show_col_types = FALSE)
+          }
+
+          # Apply common transformations
+          routine_dat_use <- routine_dat_raw %>%
             mutate(iso = iso_select,
                    indicator_name = case_when(
                      indicator_select == "anc1trimester" ~ "anc",
