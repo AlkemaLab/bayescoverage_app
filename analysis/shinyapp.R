@@ -15,8 +15,17 @@ options(cmdstanr_warn_inits = FALSE)
 
 # Data folder
 data_folder <- "data_raw"
+# data folder contains survey data "ICEH_all.long.dta"
+# and a dummy data set for routine data (routine_toydata.csv)
+
+
+# Indicators that support routine data
+indicator_routine <- c("anc1trimester", "vmsl", "ideliv", "vdpt", "anc4")
+
+# All available indicators
 indicator_all <-   c("anc1trimester", "vmsl", "ideliv", "vdpt", "anc4",
                      "bfexcl0_5", "ancq8" , "cci" , "sba" )
+
 
 # UI
 ui <- fluidPage(
@@ -45,6 +54,12 @@ ui <- fluidPage(
       textInput("iso_code", "Enter ISO Country Code:",
                 value = "KEN",
                 placeholder = "e.g., KEN, NGA, ETH"),
+
+      # Routine data checkbox (conditional on indicator selection)
+      conditionalPanel(
+        condition = "['anc1trimester', 'vmsl', 'ideliv', 'vdpt', 'anc4'].includes(input.indicator)",
+        checkboxInput("add_routine", "Add Routine Data", value = FALSE)
+      ),
 
       # Run button
       actionButton("run_model", "Run Model", class = "btn-primary"),
@@ -142,7 +157,21 @@ server <- function(input, output, session) {
 
         incProgress(0.4, detail = "Fitting local model (this may take a few minutes)...")
 
+        # Handle routine data
         routine_dat_use <- NULL
+        if (isTRUE(input$add_routine) && indicator_select %in% indicator_routine) {
+          routine_dat_use <- read_csv(here::here("data_raw/routine_toydata.csv"), show_col_types = FALSE) %>%
+            mutate(iso = iso_select,
+                   indicator_name = case_when(
+                     indicator_select == "anc1trimester" ~ "anc",
+                     indicator_select == "vmsl" ~ "measles2",
+                     indicator_select == "ideliv" ~ "instdeliveries",
+                     indicator_select == "vdpt" ~ "penta3",
+                     indicator_select == "anc4" ~ "anc4"
+                   ))
+        }
+
+
         fit_local <- fit_model(
           runstep = "local_national",
           y = "invprobit_indicator",
