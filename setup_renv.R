@@ -11,12 +11,33 @@ renv::init(bare = TRUE)
 
 cat("renv initialized successfully!\n")
 
+# # Fix cmdstanr for Posit Cloud compatibility
+# # Run this script to reinstall cmdstanr from GitHub
+#
+# cat("Removing current cmdstanr installation...\n")
+# renv::remove("cmdstanr")
+#
+# cat("\nReinstalling cmdstanr from GitHub...\n")
+# renv::install("stan-dev/cmdstanr")
+#
+# cat("\nInstalling CmdStan...\n")
+# cmdstanr::install_cmdstan()
+#
+# cat("\nCreating new renv snapshot...\n")
+# renv::snapshot(prompt = FALSE)
+#
+# cat("\n✓ Done! cmdstanr is now installed from GitHub.\n")
+# cat("The updated renv.lock should now work with Posit Cloud.\n")
+#
+
+
 # Install cmdstanr first (required by brms and bayescoveragemodel)
+# Installing from GitHub for Posit Cloud compatibility
 cat("\nInstalling cmdstanr...\n")
 if (!requireNamespace("cmdstanr", quietly = TRUE)) {
-  cat("Installing cmdstanr from R-universe...\n")
+  cat("Installing cmdstanr from GitHub (for Posit Cloud compatibility)...\n")
   tryCatch({
-    install.packages("cmdstanr", repos = c("https://stan-dev.r-universe.dev", getOption("repos")))
+    renv::install("stan-dev/cmdstanr")
 
     # Install CmdStan
     cat("Installing CmdStan...\n")
@@ -25,7 +46,7 @@ if (!requireNamespace("cmdstanr", quietly = TRUE)) {
   }, error = function(e) {
     cat(paste0("Warning: Could not install cmdstanr. Error: ", e$message, "\n"))
     cat("Please install manually using:\n")
-    cat("install.packages('cmdstanr', repos = c('https://stan-dev.r-universe.dev', getOption('repos')))\n")
+    cat("renv::install('stan-dev/cmdstanr')\n")
     cat("cmdstanr::install_cmdstan()\n")
   })
 } else {
