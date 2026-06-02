@@ -41,7 +41,7 @@ Install the following Bayescoverage-related packages from R universe:
 `install.packages('bayescoveragedeploy', repos = c('https://alkemalab.r-universe.dev')`
 
 Also install the following package from CRAN:
-`install.packages(c("dplyr", "haven", "ggplot2", "shiny",  "readr", "here", "stringr", "tibble"))`
+`install.packages(c("dplyr", "haven", "ggplot2", "shiny", "posterior", "readr", "here", "stringr", "tibble"))`
 
 For using routine data, `brms` is used as well, install using
 

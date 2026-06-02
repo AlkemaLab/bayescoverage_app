@@ -7,7 +7,7 @@
 # install.packages('bayescoveragedeploy',
 #                  repos = c('https://alkemalab.r-universe.dev'))
 # install.packages(c("dplyr", "haven", "ggplot2", "shiny",  "readr", "here", "stringr",
-#    "tibble"))
+#    "tibble", "posterior"))
 # # For using routine data, `brms` is used as well, install using
 # install.packages("brms")
 
