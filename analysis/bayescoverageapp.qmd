@@ -1,27 +1,15 @@
 ---
 title: "Bayescoverage APP - overview"
-author: "Leontine Alkema, May 11 2026"
+author: "Leontine Alkema, last updated June 1, 2026"
 format: pdf
 editor: visual
 ---
 
-Installation info is given in the readme.
-
-Just loading all packages here to avoid issues (we may be able to remove some, eg brms).
+Installation info is given in the readme and shinyapp
 
 ```{r}
 #| label: setup
-library(bayescoveragemodel)
-library(localhierarchy) # for check_nas...
-library(tidyverse)
-library(ggplot2)
-#library(ggnewscale)
-#library(ggpubr)
-library(haven)
-#library(stringr)
-#library(readxl)
-library(brms) # brms required for routine stuff
-options(cmdstanr_warn_inits = FALSE)
+library(bayescoveragedeploy)
 ```
 
 Where data are stored:
@@ -29,15 +17,14 @@ Where data are stored:
 ```{r}
 data_folder <- "data_raw" # for survey data 
 routinedata_dir <- here::here("private/routinedata/")
-# see note on wroking with routine dummy data below
+# see note on working with routine dummy data below
 ```
-
 
 Choose an indicator. Naming comes from survey data, options include
 
 -   c("anc1trimester", "vmsl", "ideliv", "vdpt", "anc4") , with routine as available
 
--    c("bfexcl0_5", "ancq8" , "cci" , "sba" ), no routine data
+-   c("bfexcl0_5", "ancq8" , "cci" , "sba" ), no routine data
 
 ```{r}
 indicator_select <-"anc4" #"cci"#"vdpt"#"anc4"
@@ -46,10 +33,10 @@ indicator_select <-"anc4" #"cci"#"vdpt"#"anc4"
 Read in survey data and process
 
 ```{r}
-dat0 <- read_dta(here::here(data_folder, "ICEH_all.long.dta")) %>%
-  rename(r = r_raw, se = se_raw) 
+dat0 <- haven::read_dta(here::here(data_folder, "ICEH_all.long.dta")) |>
+  dplyr::rename(r = r_raw, se = se_raw) 
 # process for indicator_select
-dat <- process_data(
+dat <- bayescoveragemodel::process_data(
   dat = dat0,
   regions_dat = bayescoveragemodel::regions_all,
   indicator = indicator_select)
@@ -62,8 +49,8 @@ Fitting for one country, use ISO to select
 # unique(dat$iso)
 iso_select <- "RWA"
 dat_use <- 
-  dat %>% 
-  filter(iso %in% iso_select)
+  dat |> 
+  dplyr::filter(iso %in% iso_select)
 ```
 
 Do we want to add routine data?
@@ -76,85 +63,82 @@ add_routine <- ifelse(
 add_routine
 ```
 
-If yes, read in routine data. 
+If yes, read in routine data.
 
 ```{r}
 if (!add_routine){
   routine_dat  <- routine_dat_use <- NULL
 } else {
   # if we want to use real data
-  # Some processing, we'll move this processing into a function.
+  # Some processing here, for CAM, this would come from app
   # routine_dat0 <- read_csv(
   #   paste0(routinedata_dir, "/dat_combi_",
-  #          indicator_select,  ".csv")) %>% 
+  #          indicator_select,  ".csv")) |> 
   #   mutate(indicator = indicator_select)
   # # routine_dat has indicator_name (name in routine) and 
   # # indicator (indicator name from survey data
   # routine_dat  <-
-  #   routine_dat0  %>%
+  #   routine_dat0  |>
   #   filter(worst_notmissing >= 90,
   #          worst_notoutliers >= 90,
   #          worst_abs_diff_level < 0.2,
-  #          worst_rr >= 60) %>%
-  #   #%>%
+  #          worst_rr >= 60) |>
+  #   #|>
   #   #  filter(!is.na(diff_roc))
   #   # remove countries w/o any nonNA diff_roc
-  #   group_by(iso) %>%
-  #   filter(sum(!is.na(diff_roc)) > 0) %>%
-  #   ungroup() %>%
+  #   group_by(iso) |>
+  #   filter(sum(!is.na(diff_roc)) > 0) |>
+  #   ungroup() |>
   #   mutate(sd_routine_roc = 0,
-  #          sd_routine = 0) %>%
+  #          sd_routine = 0) |>
   #   mutate(worst_combi =
   #            worst_rr/100*worst_notmissing/100*worst_notoutliers)
 
   # routine_dat_use <- 
-  #   routine_dat %>% 
+  #   routine_dat |> 
   #   filter(iso %in% iso_select)
 
   # or if we want to use dummy data
-  routine_dat_use <- read_csv(here::here("data_raw/routine_toydata.csv")) %>%
+  routine_dat_use <- readr::read_csv(here::here("data_raw/routine_toydata.csv")) |>
   # add iso
-  mutate(iso = iso_select,
+  dplyr::mutate(iso = iso_select,
   # add indicator name (as per routine data naming)
-            indicator_name = case_when(
+            indicator_name = dplyr::case_when(
               indicator_select == "anc1trimester" ~ "anc",
               indicator_select == "vmsl" ~ "measles2",
               indicator_select == "ideliv" ~ "instdeliveries",
               indicator_select == "vdpt" ~ "penta3",
               indicator_select == "anc4" ~ "anc4"
-            ))
+            ),
+  # add indicator (from survey data naming)
+            indicator = indicator_select)
 
 }
+routine_dat_use
 ```
 
 
-
 ```{r}
-fit <- fit_model(runstep = "local_national",
-                       y = "invprobit_indicator",
-                       se = "se_invprobit_indicator",
-                       survey_df = dat_use,
-                       routine_data = routine_dat_use,
-                       #stan_file_path = stan_file_path_update,
-                       chains = 4,
-                       iter_sampling = 300,
-                       iter_warmup = 150,
-                       # validation_cutoff_year = 2010,
-                       get_posteriors = TRUE)
+fit <- bayescoveragedeploy::fit_local_model(
+          survey_df = dat |> dplyr::filter(iso %in% iso_select),
+          indicator = indicator_select, 
+          iso_select  = iso_select,
+          routine_df = routine_dat_use
+        )
 ```
 
 Overview plot
+
 ```{r}
-countryplot <- plot_estimates_local_all(
+countryplot <- bayescoveragemodel::plot_estimates_local_all(
   results = fit,
   save_plots = FALSE)[[1]]
 countryplot
 ```
 
-Estimates 
+Estimates
 
 ```{r}
-fit$posteriors$temporal %>%
-  select(iso, year, `50%`, `2.5%`, `97.5%`) 
+fit$posteriors$temporal |>
+  dplyr::select(iso, year, `50%`, `2.5%`, `97.5%`) 
 ```
-

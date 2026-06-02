@@ -1,46 +1,56 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
+# Update June 1, 2026
+
+App is working with deploy package hoorah! But version update 0.1.01 on
+R universe is pending. This page will show you if windows build was
+successful <https://alkemalab.r-universe.dev/builds>
+
 # BayesCoverage App
 
 Repository with code and Shiny app to fit Bayesian hierarchical
 transition models to health coverage indicators (e.g., ANC4,
 institutional delivery) using survey and routine data.
 
-The app uses the R package `bayescoveragemodel`, see
-<https://alkemalab.github.io/bayescoveragemodel/>.
+The modeling is based on the R package `bayescoveragemodel`, see
+<https://alkemalab.github.io/bayescoveragemodel/>. However, to avoid
+installation issues related to C++ compilers, we added the
+Bayescoveragedeploy package, see
+<https://github.com/AlkemaLab/bayescoveragedeploy/>, which contains
+precompiled Stan models. Through the deploy package, you can use the
+Shiny app without needing to install cmdstanr etc on your machine.
 
 This work was supported, in whole or in part, by the Bill & Melinda
 Gates Foundation (INV-001299).
 
 # Installation
 
-Dependencies
+To avoid installation issues related to C++ compilers, we added the
+Bayescoveragedeploy package, which contains precompiled Stan models.
+This means you can install the package and use the Shiny app without
+needing to install cmdstanr or CmdStan on your machine.
 
-- `cmdstanr`: Instructions for installing `cmdstanr` are available in
-  their [Getting
-  started](https://mc-stan.org/cmdstanr/articles/cmdstanr.html) guide.
-  If helpful, see this g-doc
-  <https://docs.google.com/document/d/1veMoHhijzYUzPA0LuZcw1T3B1ewjvVQhlsZgSNQ5GjQ/edit?usp=sharing>
+Install the following Bayescoverage-related packages from github
+(releases via R universe are pending)
+`devtools::install_github("AlkemaLab/bayescoveragemodel")`
+`devtools::install_github("AlkemaLab/localhierarchy")`
 
-- R package `localhierarchy`, available at
-  [github.com/AlkemaLab/localhierarchy](https://github.com/AlkemaLab/localhierarchy).
-  You can install it using
+Install the following Bayescoverage-related packages from R universe:
 
-`remotes::install_github("AlkemaLab/localhierarchy")`
+`install.packages('bayescoveragedeploy', repos = c('https://alkemalab.r-universe.dev')`
 
-- R package `bayescoveragemodel`, install using
+Also install the following package from CRAN:
+`install.packages(c("dplyr", "haven", "ggplot2", "shiny",  "readr", "here", "stringr", "tibble"))`
 
-`remotes::install_github("AlkemaLab/bayescoveragemodel")`
-
-- For using routine data, `brms` is used as well, install using
+For using routine data, `brms` is used as well, install using
 
 `install.packages("brms")`
 
 # Data and analysis
 
-Survey data are included in the `data_raw` folder. Model fitting with
-survey data is illustrated in `analysis/bayescoverageapp.qmd` and
+Example survey data are included in the `data_raw` folder. Model fitting
+with survey data is illustrated in `analysis/bayescoverageapp.qmd` and
 `analysis/shinyapp.R`.
 
 Routine data are not on github, store those in your local

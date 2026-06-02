@@ -1,17 +1,19 @@
 # Shiny App for Bayesian Coverage Analysis
 # Takes in country data and outputs estimates in a CSV
 
+# # Installation instructions are in readme, copied here
+# devtools::install_github("AlkemaLab/bayescoveragemodel")
+# devtools::install_github("AlkemaLab/localhierarchy")
+# install.packages('bayescoveragedeploy',
+#                  repos = c('https://alkemalab.r-universe.dev'))
+# install.packages(c("dplyr", "haven", "ggplot2", "shiny",  "readr", "here", "stringr",
+#    "tibble"))
+# # For using routine data, `brms` is used as well, install using
+# install.packages("brms")
+
 # Load Libraries
 library(shiny)
-library(bayescoveragemodel)
-library(localhierarchy) # for check_nas...
-library(tidyverse)
-library(ggplot2)
-library(haven)
-library(brms) # brms required for routine stuff
-options(cmdstanr_warn_inits = FALSE)
-
-
+library(bayescoveragedeploy)
 
 # Data folder
 data_folder <- "data_raw"
@@ -119,18 +121,18 @@ server <- function(input, output, session) {
   # Load data based on source selection
   data_raw <- reactive({
     if (input$data_source == "existing") {
-      dat <- read_dta(here::here(data_folder, "ICEH_all.long.dta")) %>%
-        rename(r = r_raw, se = se_raw)
+      dat <- haven::read_dta(here::here(data_folder, "ICEH_all.long.dta")) |>
+        dplyr::rename(r = r_raw, se = se_raw)
       return(dat)
     } else {
       req(input$data_file)
       file_ext <- tools::file_ext(input$data_file$datapath)
 
       if (file_ext == "dta") {
-        dat <- read_dta(input$data_file$datapath) %>%
-          rename(r = r_raw, se = se_raw)
+        dat <- haven::read_dta(input$data_file$datapath) |>
+          dplyr::rename(r = r_raw, se = se_raw)
       } else if (file_ext == "csv") {
-        dat <- read_csv(input$data_file$datapath, show_col_types = FALSE)
+        dat <- readr::read_csv(input$data_file$datapath, show_col_types = FALSE)
       } else {
         stop("Unsupported file format. Please upload .dta or .csv")
       }
@@ -169,7 +171,7 @@ server <- function(input, output, session) {
         incProgress(0.3, detail = "Processing survey data...")
 
         # Process survey data
-        dat <- process_data(
+        dat <- bayescoveragemodel::process_data(
           dat = dat0,
           regions_dat = bayescoveragemodel::regions_all,
           indicator = indicator_select
@@ -193,7 +195,8 @@ server <- function(input, output, session) {
             req(input$routine_file)
 
             # Read uploaded routine data
-            routine_dat_raw <- read_csv(input$routine_file$datapath, show_col_types = FALSE)
+            routine_dat_raw <- readr::read_csv(input$routine_file$datapath,
+                                        show_col_types = FALSE)
 
             # Validate columns
             required_cols <- c("year", "routine_value", "routine_roc", "worst_combi",
@@ -206,13 +209,14 @@ server <- function(input, output, session) {
             }
           } else {
             # Use existing (dummy) routine data
-            routine_dat_raw <- read_csv(here::here("data_raw/routine_toydata.csv"), show_col_types = FALSE)
+            routine_dat_raw <- readr::read_csv(here::here("data_raw/routine_toydata.csv"),
+                                        show_col_types = FALSE)
           }
 
           # Apply common transformations
-          routine_dat_use <- routine_dat_raw %>%
-            mutate(iso = iso_select,
-                   indicator_name = case_when(
+          routine_dat_use <- routine_dat_raw |>
+            dplyr::mutate(iso = iso_select,
+                   indicator_name = dplyr::case_when(
                      indicator_select == "anc1trimester" ~ "anc",
                      indicator_select == "vmsl" ~ "measles2",
                      indicator_select == "ideliv" ~ "instdeliveries",
@@ -222,16 +226,10 @@ server <- function(input, output, session) {
         }
 
 
-        fit_local <- fit_model(
-          runstep = "local_national",
-          y = "invprobit_indicator",
-          se = "se_invprobit_indicator",
-          survey_df = dat %>% filter(iso %in% iso_select),
-          routine_data = routine_dat_use,
-          chains = 4,
-          iter_sampling = 300,
-          iter_warmup = 150,
-          get_posteriors = TRUE
+        fit_local <- fit_local_model(
+          survey_df = dat |> dplyr::filter(iso %in% iso_select),
+          iso_select  = iso_select,
+          routine_df = routine_dat_use
         )
 
 
@@ -265,7 +263,7 @@ server <- function(input, output, session) {
   # Output: Plot
   output$estimate_plot <- renderPlot({
     req(rv$fit_local)
-    plot_estimates_local_all(results = rv$fit_local)
+    bayescoveragemodel::plot_estimates_local_all(results = rv$fit_local)
   })
 
 
@@ -274,11 +272,11 @@ server <- function(input, output, session) {
   # Output: Estimates table preview
   output$estimates_table <- renderTable({
     req(rv$fit_local)
-    head( rv$fit_local$posterior$temporal %>%
-            rename(estimate = `50%`,
+    head( rv$fit_local$posterior$temporal |>
+            dplyr::rename(estimate = `50%`,
                    lower_95 =`2.5%`,,
-                   upper_95 = `97.5%`) %>%
-            select(year, estimate, lower_95, upper_95)
+                   upper_95 = `97.5%`) |>
+            dplyr::select(year, estimate, lower_95, upper_95)
           , 10)
   })
 
@@ -289,11 +287,11 @@ server <- function(input, output, session) {
     },
     content = function(file) {
       req(rv$fit_local)
-      write_csv(rv$fit_local$posterior$temporal %>%
-                  rename(estimate = `50%`,
+      write_csv(rv$fit_local$posterior$temporal |>
+                  dplyr::rename(estimate = `50%`,
                          lower_95 =`2.5%`,,
-                         upper_95 = `97.5%`) %>%
-                  select(year, estimate, lower_95, upper_95), file)
+                         upper_95 = `97.5%`) |>
+                  dplyr::select(year, estimate, lower_95, upper_95), file)
     }
   )
 }
