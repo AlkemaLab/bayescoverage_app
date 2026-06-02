@@ -1,11 +1,10 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# Update June 1, 2026
+# Update June 2, 2026
 
-App is working with deploy package hoorah! But version update 0.1.01 on
-R universe is pending. This page will show you if windows build was
-successful <https://alkemalab.r-universe.dev/builds>
+App is working with deploy package hoorah! Version update 0.1.01 is
+available here: <https://alkemalab.r-universe.dev/builds>
 
 # BayesCoverage App
 
@@ -31,14 +30,14 @@ Bayescoveragedeploy package, which contains precompiled Stan models.
 This means you can install the package and use the Shiny app without
 needing to install cmdstanr or CmdStan on your machine.
 
-Install the following Bayescoverage-related packages from github
-(releases via R universe are pending)
+Install the following Bayescoverage-related packages from github (now
+also available via R universe)
 `devtools::install_github("AlkemaLab/bayescoveragemodel")`
 `devtools::install_github("AlkemaLab/localhierarchy")`
 
 Install the following Bayescoverage-related packages from R universe:
 
-`install.packages('bayescoveragedeploy', repos = c('https://alkemalab.r-universe.dev')`
+`install.packages('bayescoveragedeploy', repos = c('https://alkemalab.r-universe.dev'))`
 
 Also install the following package from CRAN:
 `install.packages(c("dplyr", "haven", "ggplot2", "shiny", "posterior", "readr", "here", "stringr", "tibble"))`
