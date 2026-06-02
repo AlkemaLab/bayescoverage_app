@@ -1,12 +1,10 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# Update June 2, 2026
-
-App is working with deploy package hoorah! Version update 0.1.01 is
-available here: <https://alkemalab.r-universe.dev/builds>
-
 # BayesCoverage App
+
+**For information on installation, please see the “Installation” section
+below.**
 
 Repository with code and Shiny app to fit Bayesian hierarchical
 transition models to health coverage indicators (e.g., ANC4,
@@ -18,7 +16,9 @@ installation issues related to C++ compilers, we added the
 Bayescoveragedeploy package, see
 <https://github.com/AlkemaLab/bayescoveragedeploy/>, which contains
 precompiled Stan models. Through the deploy package, you can use the
-Shiny app without needing to install cmdstanr etc on your machine.
+Shiny app without needing to install cmdstanr etc on your machine. The
+deploy package is available here:
+<https://alkemalab.r-universe.dev/builds>
 
 This work was supported, in whole or in part, by the Bill & Melinda
 Gates Foundation (INV-001299).
