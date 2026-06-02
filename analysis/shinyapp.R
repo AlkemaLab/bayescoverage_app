@@ -272,12 +272,12 @@ server <- function(input, output, session) {
   # Output: Estimates table preview
   output$estimates_table <- renderTable({
     req(rv$fit_local)
-    head( rv$fit_local$posterior$temporal |>
+    rv$fit_local$posterior$temporal |>
             dplyr::rename(estimate = `50%`,
                    lower_95 =`2.5%`,,
                    upper_95 = `97.5%`) |>
             dplyr::select(year, estimate, lower_95, upper_95)
-          , 10)
+
   })
 
   # Download handler for CSV
@@ -287,7 +287,7 @@ server <- function(input, output, session) {
     },
     content = function(file) {
       req(rv$fit_local)
-      write_csv(rv$fit_local$posterior$temporal |>
+      readr::write_csv(rv$fit_local$posterior$temporal |>
                   dplyr::rename(estimate = `50%`,
                          lower_95 =`2.5%`,,
                          upper_95 = `97.5%`) |>
