@@ -29,8 +29,7 @@ and routine data.
 The modeling is based on the R package `bayescoveragemodel`, see https://alkemalab.github.io/bayescoveragemodel/. However, to avoid installation issues related to C++ compilers, we added the Bayescoveragedeploy package, see https://github.com/AlkemaLab/bayescoveragedeploy/, which contains precompiled Stan models. Through the deploy package, you can use the Shiny app without needing to install cmdstanr etc on your machine. The deploy package is available here:
 https://alkemalab.r-universe.dev/builds 
 
-This work was supported, in whole or in part, by the Bill & Melinda
-Gates Foundation (INV-001299).
+This work was supported, in whole or in part, by the Gates Foundation (INV-001299).
 
 # Installation
 

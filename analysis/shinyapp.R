@@ -121,7 +121,7 @@ server <- function(input, output, session) {
   # Load data based on source selection
   data_raw <- reactive({
     if (input$data_source == "existing") {
-      dat <- haven::read_dta(here::here(data_folder, "ICEH_all.long.dta")) |>
+      dat <- haven::read_dta(here::here(data_folder, "ICEH_all.long_20260603.dta")) |>
         dplyr::rename(r = r_raw, se = se_raw)
       return(dat)
     } else {
@@ -172,10 +172,10 @@ server <- function(input, output, session) {
 
         # Process survey data
         dat <- bayescoveragemodel::process_data(
-          dat = dat0,
+          dat = dat0 |>
+            dplyr::filter(iso %in% iso_select),
           regions_dat = bayescoveragemodel::regions_all,
-          indicator = indicator_select
-        )
+          indicator = indicator_select, verbose = FALSE)
 
 
         # Check if ISO exists in data
@@ -199,37 +199,38 @@ server <- function(input, output, session) {
                                         show_col_types = FALSE)
 
             # Validate columns
-            required_cols <- c("year", "routine_value", "routine_roc", "worst_combi",
-                             "sd_routine_roc", "sd_routine")
+            required_cols <- c("year", "routine_value", "countdownmean", "indicator_name")
             missing_cols <- setdiff(required_cols, names(routine_dat_raw))
 
             if (length(missing_cols) > 0) {
               stop(paste("Uploaded routine data is missing required columns:",
                         paste(missing_cols, collapse = ", ")))
             }
+            routine_dat_use <- routine_dat_raw |>
+              dplyr::filter(iso == iso_select, indicator_name == indicator_select)
+
           } else {
             # Use existing (dummy) routine data
             routine_dat_raw <- readr::read_csv(here::here("data_raw/routine_toydata.csv"),
                                         show_col_types = FALSE)
-          }
 
-          # Apply common transformations
-          routine_dat_use <- routine_dat_raw |>
-            dplyr::mutate(iso = iso_select,
-                   indicator_name = dplyr::case_when(
-                     indicator_select == "anc1trimester" ~ "anc",
-                     indicator_select == "vmsl" ~ "measles2",
-                     indicator_select == "ideliv" ~ "instdeliveries",
-                     indicator_select == "vdpt" ~ "penta3",
-                     indicator_select == "anc4" ~ "anc4"
-                   ))
+            # add iso and indicator_name to routine data
+            routine_dat_use <- routine_dat_raw |>
+              dplyr::mutate(iso = iso_select,
+                     indicator_name = indicator_select)
+          }
         }
 
 
         fit_local <- fit_local_model(
           survey_df = dat |> dplyr::filter(iso %in% iso_select),
           iso_select  = iso_select,
-          routine_df = routine_dat_use
+          routine_df = routine_dat_use,
+          # these sampling settings will be the new defaults in updated deploy package
+          iter_sampling = 300,
+          iter_warmup = 150,
+          adapt_delta = 0.95,
+          max_treedepth = 14
         )
 
 

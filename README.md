@@ -20,8 +20,8 @@ Shiny app without needing to install cmdstanr etc on your machine. The
 deploy package is available here:
 <https://alkemalab.r-universe.dev/builds>
 
-This work was supported, in whole or in part, by the Bill & Melinda
-Gates Foundation (INV-001299).
+This work was supported, in whole or in part, by the Gates Foundation
+(INV-001299).
 
 # Installation
 

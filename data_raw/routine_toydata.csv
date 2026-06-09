@@ -1,6 +1,6 @@
-﻿iso,year,routine_value,routine_roc,worst_combi,sd_routine_roc,sd_routine,indicator_name,indicator
-,2020,0.5,,95,0,0,,
-,2021,0.51,0.01,95,0,0,,
-,2022,0.52,0.01,95,0,0,,
-,2023,0.57,0.05,95,0,0,,
-,2024,0.54,-0.03,95,0,0,,
+﻿iso,indicator_name,year,routine_value,countdownmean
+,,2020,0.52,95
+,,2021,0.53,100
+,,2022,0.55,100
+,,2023,0.52,100
+,,2024,0.56,100
