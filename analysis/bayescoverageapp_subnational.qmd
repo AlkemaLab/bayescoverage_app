@@ -122,11 +122,12 @@ routine_dat_use
 #   countdownmean = rep(100, 3))
 ```
 
-make sure to use the "subnational = TRUE" argument to fit the model
+make sure to use the "subnational = TRUE" argument to fit the model.
+Just fitting here to the region where we have routine data
 
 ```{r}
 fit <- bayescoveragedeploy::fit_local_model(
-          survey_df = dat_use,
+          survey_df = dat_use |> dplyr::filter(admin1 %in% routine_dat_use$admin1),
           subnational = TRUE, 
           indicator = indicator_select, 
           iso_select  = iso_select,
@@ -150,13 +151,12 @@ fit$posteriors$temporal |>
   dplyr::select(iso, admin1, year, `50%`, `2.5%`, `97.5%`) 
 ```
 
-Compare to a fit w/o routine data (if routine data were added)
+Compare to a fit w/o routine data, all regions here
 
 ```{r}
 fit_noroutine<- bayescoveragedeploy::fit_local_model(
   # fit just for the first region
-          survey_df = dat_use |> 
-                dplyr::filter(admin1 %in% routine_dat_use$admin1),
+          survey_df = dat_use,
           subnational = TRUE, 
           indicator = indicator_select, 
           iso_select  = iso_select,
@@ -168,5 +168,15 @@ countryplot <- bayescoveragemodel::plot_estimates_local_all(
   modelnames = c("with routine", "without routine"),
   save_plots = FALSE)
 countryplot[[1]]
+```
+
+Add comparison plot
+```{r}
+p <- bayescoveragemodel::plot_subnational_comparison(results  = fit,
+                                 results2 = fit_noroutine,
+                                 model_names = c("Model w routine data",
+                                                "Model w/o routine data"),
+                                 year_select  = 2025)
+p
 ```
 

@@ -46,7 +46,7 @@ Install the following Bayescoverage-related packages from R universe:
 
 
 Also install the following package from CRAN:
-`install.packages(c("dplyr", "haven", "ggplot2", "shiny", "posterior", "readr", "here", "stringr", "tibble"))` 
+`install.packages(c("dplyr", "haven", "forcats", "ggplot2", "shiny", "posterior", "readr", "here", "stringr", "tibble"))` 
 
 
 For using routine data, `brms` is used as well, install using 
@@ -55,8 +55,8 @@ For using routine data, `brms` is used as well, install using
 
 # Data and analysis
 
-Example survey data are included in the `data_raw` folder. Model fitting with survey data is illustrated in `analysis/bayescoverageapp.qmd` and `analysis/shinyapp.R`.
+Example survey data are included in the `data_raw` folder. Model fitting with survey data is illustrated in `analysis/bayescoverageapp.qmd` and `analysis/shinyapp.R`. Subnational fitting is included in the app as well, and in `analysis/bayescoverageapp_subnational.qmd`.
 
-Routine data are not on github, store those in your local `private/routinedata/` folder. For testing, a routine toy data set is included in the `data_raw` folder, you need to add `iso` and `indicator_name` to that data set to use it, see quarto and shiny app for example use.
+Routine data are not on github, store those in your local `private/routinedata/` folder. For testing, a routine toy data set is included in the `data_raw` folder, you need to add `iso`/`admin1` (for country/subnational estimation) and `indicator_name` to that data set to use it, see quarto and shiny app for example use.
 
 
