@@ -1,0 +1,172 @@
+---
+title: "Bayescoverage APP - subnational overview"
+author: "Leontine Alkema, last updated June 12, 2026"
+format: pdf
+editor: visual
+---
+
+Installation info is given in the readme and shinyapp
+
+```{r}
+#| label: setup
+library(bayescoveragedeploy)
+```
+
+Where data are stored:
+
+```{r}
+data_folder <- "data_raw" # for survey data 
+routinedata_dir <- here::here("private/routinedata/")
+# see note on working with routine dummy data below
+```
+
+Choose an indicator. Naming comes from survey data, options include
+
+-   c("anc1trimester", "vmsl", "ideliv", "vdpt", "anc4") , with routine as available
+
+-   c("bfexcl0_5", "ancq8" , "cci" , "sba" ), no routine data
+
+
+NOTE JUNE 12: ONLY CCI and ANC4 can be used right now
+
+```{r}
+indicator_select <- "anc4" #"cci"
+```
+
+Read in survey data and process
+
+```{r}
+dat0 <- haven::read_dta(here::here(data_folder, "ICEH_gregion_20260611.dta")) |>
+  dplyr::rename(r = r_raw, se = se_raw, , admin1 = "level")
+```
+
+If relevant, LA added code to clean the 6/11 data set to only keep only years with same regional structure as most recent year (as some countries have different regions for different surveys).
+
+Copying here in quarto but not used.
+
+
+```{r, eval = FALSE}
+
+# Filter to 
+# For each iso-indic combination:
+# 1. Find the most recent year
+# 2. Get the unique regions in that year
+# 3. Keep only years where regions match the most recent year
+dat1 <- dat0 |>
+  dplyr::group_by(iso, indic) |>
+  dplyr::mutate(
+    max_year = max(year, na.rm = TRUE)
+  ) |>
+  dplyr::group_by(iso, indic, year) |>
+  dplyr::mutate(
+    regions_this_year = paste(sort(unique(admin1)), collapse = "|")
+  ) |>
+  dplyr::group_by(iso, indic) |>
+  dplyr::mutate(
+    regions_max_year = regions_this_year[year == max_year][1]
+  ) |>
+  dplyr::filter(regions_this_year == regions_max_year) |>
+  dplyr::select(-max_year, -regions_this_year, -regions_max_year) |>
+  dplyr::ungroup()
+```
+
+
+Fitting for 1 or more regions in one country, use ISO to select
+
+```{r}
+# countries with survey data
+# unique(dat$iso)
+iso_select <- "NGA"
+dat_use <- 
+  bayescoveragemodel::process_data(
+  dat = dat0 |> 
+  dplyr::filter(iso %in% iso_select),
+  regions_dat = bayescoveragemodel::regions_all,
+  indicator = indicator_select, verbose = FALSE)
+# regions
+admin1s <- sort(unique(dat_use$admin1))
+admin1s
+```
+
+Do we want to add routine data?
+
+```{r}
+add_routine <- ifelse(
+  indicator_select %in% c("anc1trimester", "vmsl", "ideliv", "vdpt", "anc4"),
+  TRUE, 
+  FALSE)
+add_routine
+```
+
+If yes, read in routine data. Make sure it has an admin1 column with admin1 names that match the survey data. DO NOT include an iso column in the routine data set. 
+
+```{r}
+if (!add_routine){
+  routine_dat  <- routine_dat_use <- NULL
+} else {
+  # use dummy data, need
+  routine_dat_use <-  readr::read_csv(here::here("data_raw/routine_toydata.csv")) |>
+  # add admin1 column with matching names to dat_use
+  dplyr::mutate(admin1 = admin1s[1], 
+                     indicator_name = indicator_select) |>
+  dplyr::select(-iso) 
+}
+routine_dat_use
+
+# or use a dummy set as follows:
+# routine_dat_use <- data.frame(
+#   iso = rep(iso_select, 3),
+#    year = 2021:2023,
+#   indicator_name = indicator_select,
+#   routine_value = c(0.85, 0.87, 0.90),
+#   countdownmean = rep(100, 3))
+```
+
+make sure to use the "subnational = TRUE" argument to fit the model
+
+```{r}
+fit <- bayescoveragedeploy::fit_local_model(
+          survey_df = dat_use,
+          subnational = TRUE, 
+          indicator = indicator_select, 
+          iso_select  = iso_select,
+          routine_df = routine_dat_use
+        )
+```
+
+Overview plot
+
+```{r}
+countryplot <- bayescoveragemodel::plot_estimates_local_all(
+  results = fit,
+  save_plots = FALSE)
+countryplot[[1]]
+```
+
+Estimates
+
+```{r}
+fit$posteriors$temporal |>
+  dplyr::select(iso, admin1, year, `50%`, `2.5%`, `97.5%`) 
+```
+
+Compare to a fit w/o routine data (if routine data were added)
+
+```{r}
+fit_noroutine<- bayescoveragedeploy::fit_local_model(
+  # fit just for the first region
+          survey_df = dat_use |> 
+                dplyr::filter(admin1 %in% routine_dat_use$admin1),
+          subnational = TRUE, 
+          indicator = indicator_select, 
+          iso_select  = iso_select,
+          routine_df = NULL)
+countryplot <- bayescoveragemodel::plot_estimates_local_all(
+  results = fit,
+  results2 = fit_noroutine,
+  region_codes = routine_dat_use$admin1[1],
+  modelnames = c("with routine", "without routine"),
+  save_plots = FALSE)
+countryplot[[1]]
+```
+
