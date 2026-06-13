@@ -127,7 +127,9 @@ server <- function(input, output, session) {
     model_complete = FALSE,
     single_plot = NULL,       # For national mode
     comparison_plot = NULL,   # For subnational comparison plot
-    admin1_regions = NULL     # Store admin1 regions for subnational mode
+    admin1_regions = NULL,    # Store admin1 regions for subnational mode
+    indicator_select = NULL,  # Store current indicator selection
+    iso_select = NULL         # Store current ISO selection
   )
 
   # Dynamic UI: Indicator selection based on mode
@@ -216,6 +218,8 @@ server <- function(input, output, session) {
     rv$single_plot <- NULL
     rv$comparison_plot <- NULL
     rv$admin1_regions <- NULL
+    rv$indicator_select <- NULL
+    rv$iso_select <- NULL
     showNotification("Results cleared. Ready to run a new model.", type = "message", duration = 3)
   })
 
@@ -227,6 +231,8 @@ server <- function(input, output, session) {
       rv$single_plot <- NULL
       rv$comparison_plot <- NULL
       rv$admin1_regions <- NULL
+      rv$indicator_select <- NULL
+      rv$iso_select <- NULL
       showNotification(
         paste("Switched to",
               ifelse(input$estimation_mode == "subnational", "subnational", "national"),
@@ -240,10 +246,13 @@ server <- function(input, output, session) {
   # Run model when button clicked
   observeEvent(input$run_model, {
     req(input$iso_code)
+    req(input$indicator)
 
     rv$model_complete <- FALSE
     rv$fit_local <- NULL
     rv$admin1_regions <- NULL
+    rv$single_plot <- NULL
+    rv$comparison_plot <- NULL
 
     # Show progress
     withProgress(message = 'Fitting model...', value = 0, {
@@ -251,6 +260,10 @@ server <- function(input, output, session) {
       tryCatch({
         indicator_select <- input$indicator
         iso_select <- toupper(trimws(input$iso_code))
+
+        # Store in reactive values for use during plotting
+        rv$indicator_select <- indicator_select
+        rv$iso_select <- iso_select
 
         incProgress(0.1, detail = "Loading data...")
 
@@ -406,6 +419,7 @@ server <- function(input, output, session) {
         } else {
           fit_local <- fit_local_model(
             survey_df = dat |> dplyr::filter(iso %in% iso_select),
+            indicator = indicator_select,
             iso_select = iso_select,
             routine_df = routine_dat_use,
             # these sampling settings will be the new defaults in updated deploy package
@@ -421,14 +435,31 @@ server <- function(input, output, session) {
 
         rv$fit_local <- fit_local
 
+        # Generate plots
         if (input$estimation_mode == "subnational") {
           # For subnational mode, only generate comparison plot
           # Regional plots will be generated on-demand when selected
-          rv$comparison_plot <- bayescoveragemodel::plot_subnational_comparison(
-            results = fit_local,
-            model_names = "Bayesian model estimates",
-            year_select = 2025
-          )
+
+          tryCatch({
+            rv$comparison_plot <- bayescoveragemodel::plot_subnational_comparison(
+              results = fit_local,
+              model_names = "Bayesian model estimates",
+              year_select = 2025
+            )
+
+            if (is.null(rv$comparison_plot)) {
+              stop("Comparison plot generation returned NULL")
+            }
+          }, error = function(e) {
+            showNotification(paste("Warning: Could not generate comparison plot:", e$message),
+                           type = "warning", duration = 10)
+            # Set a placeholder to prevent UI from hanging
+            rv$comparison_plot <- ggplot2::ggplot() +
+              ggplot2::annotate("text", x = 0.5, y = 0.5,
+                               label = paste("Plot generation failed:", e$message),
+                               size = 4) +
+              ggplot2::theme_void()
+          })
           rv$single_plot <- NULL
         } else {
           # For national mode, generate the single plot
@@ -463,7 +494,7 @@ server <- function(input, output, session) {
     } else {
       paste(
         ifelse(input$estimation_mode == "subnational", "Subnational", "National"),
-        "mode: Model fitting complete for", toupper(input$iso_code), "-", input$indicator
+        "mode: Model fitting complete for", rv$iso_select, "-", rv$indicator_select
       )
     }
   })
@@ -515,6 +546,8 @@ server <- function(input, output, session) {
     req(input$estimation_mode == "subnational")
     req(input$region_select)
     req(input$region_select != "")
+    req(rv$indicator_select)
+    req(rv$iso_select)
 
     # Generate plot for the selected region on-demand
     plot_list <- bayescoveragemodel::plot_estimates_local_all(
@@ -555,7 +588,7 @@ server <- function(input, output, session) {
   output$download_csv <- downloadHandler(
     filename = function() {
       mode_suffix <- if (input$estimation_mode == "subnational") "_subnational" else "_national"
-      paste0("estimates_", input$indicator, "_", input$iso_code, mode_suffix, "_", Sys.Date(), ".csv")
+      paste0("estimates_", rv$indicator_select, "_", rv$iso_select, mode_suffix, "_", Sys.Date(), ".csv")
     },
     content = function(file) {
       req(rv$fit_local)
